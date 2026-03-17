@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vintage Cam</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h2>📸 Vintage Cam</h2>
+
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
+
+  <div id="filters"></div>
+
+  <div class="controls">
+    <button onclick="capturePhoto()">📸 Photo</button>
+    <button onclick="toggleRecording()">🎥 Record</button>
+    <button onclick="shareMedia()">💾 Save</button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
