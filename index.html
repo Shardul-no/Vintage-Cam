@@ -1,24 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>Vintage Cam</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📸</text></svg>">
 </head>
 <body>
 
-  <h2>📸 Vintage Cam</h2>
-
-  <video id="video" autoplay playsinline></video>
-  <canvas id="canvas"></canvas>
-
-  <div id="filters"></div>
-
-  <div class="controls">
-    <button onclick="capturePhoto()">📸 Photo</button>
-    <button onclick="toggleRecording()">🎥 Record</button>
-    <button onclick="shareMedia()">💾 Save</button>
+  <!-- Camera View -->
+  <div class="camera-container">
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+    
+    <!-- Flash overlay -->
+    <div id="flash" class="flash"></div>
+    
+    <!-- Timestamp -->
+    <div id="timestamp" class="timestamp">98 03 21</div>
+    
+    <!-- Recording indicator -->
+    <div id="recording-indicator" class="recording-indicator hidden">
+      <div class="red-dot"></div>
+      REC
+    </div>
   </div>
+
+  <!-- Filter Selector -->
+  <div class="film-strip">
+    <div id="filters" class="filter-scroll"></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button id="exposure-btn" class="exposure-btn" title="Exposure">☀️</button>
+    <button id="capture-btn" class="capture-btn" title="Photo">�</button>
+    <button id="record-btn" class="record-btn" title="Video">�</button>
+    <button id="save-btn" class="save-btn" title="Save">⬇️</button>
+  </div>
+
+  <!-- Messages -->
+  <div id="message" class="message hidden"></div>
 
   <script src="app.js"></script>
 </body>
