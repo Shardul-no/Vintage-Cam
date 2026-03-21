@@ -1,106 +1,547 @@
 [
   {
-    "name": "Huji Disposable",
-    "sepia": 0.6,
-    "contrast": 1.4,
-    "brightness": 1.1,
-    "grain": 25,
-    "vignette": true,
-    "lightLeak": true,
-    "date": true,
-    "rgbShift": 2,
-    "blur": 0.5
+    "name": "Natural",
+    "category": "effects",
+    "sepia": 0,
+    "contrast": 1,
+    "brightness": 1,
+    "grain": 0,
+    "date": false
   },
   {
-    "name": "35mm Film (CPM35)",
-    "sepia": 0.4,
+    "name": "Flash",
+    "category": "effects",
+    "sepia": 0.08,
+    "contrast": 1.1,
+    "brightness": 1.0,
+    "grain": 14,
+    "date": true,
+    "flash": {
+      "intensity": 0.65,
+      "tint": [0, 6, 12],
+      "falloff": 0.5,
+      "bgDarken": 0.25,
+      "hotspot": 200
+    }
+  },
+  {
+    "name": "Night Flash",
+    "category": "effects",
+    "sepia": 0.25,
+    "contrast": 1.2,
+    "brightness": 0.9,
+    "grain": 22,
+    "warmth": 0.12,
+    "date": true,
+    "flash": {
+      "intensity": 0.8,
+      "tint": [8, 4, 0],
+      "falloff": 0.4,
+      "bgDarken": 0.4,
+      "hotspot": 190
+    }
+  },
+  {
+    "name": "Cool Flash",
+    "category": "effects",
+    "sepia": 0,
+    "contrast": 1.15,
+    "brightness": 1.0,
+    "grain": 16,
+    "coolTint": 0.06,
+    "date": false,
+    "flash": {
+      "intensity": 0.6,
+      "tint": [0, 10, 20],
+      "falloff": 0.48,
+      "bgDarken": 0.3,
+      "hotspot": 205
+    }
+  },
+  {
+    "name": "VHS",
+    "category": "effects",
+    "sepia": 0.15,
     "contrast": 1.2,
     "brightness": 1.05,
-    "grain": 20,
-    "vignette": true,
-    "fade": 0.1,
-    "rgbShift": 1,
-    "blur": 0.3
-  },
-  {
-    "name": "Polaroid Soft",
-    "sepia": 0.3,
-    "contrast": 0.9,
-    "brightness": 1.2,
-    "grain": 15,
-    "fade": 0.3,
-    "vignette": false,
-    "rgbShift": 0,
-    "blur": 0.6
-  },
-  {
-    "name": "90s Digital Cam",
-    "sepia": 0.2,
-    "contrast": 1.5,
-    "brightness": 1.1,
     "grain": 35,
-    "vignette": false,
-    "rgbShift": 3,
-    "sharpen": 1.2,
-    "date": true
-  },
-  {
-    "name": "VHS Camcorder",
-    "vhs": true,
-    "sepia": 0.5,
-    "contrast": 1.3,
-    "brightness": 1,
-    "grain": 40,
     "scanlines": true,
     "rgbShift": 4,
     "glitch": true,
-    "bloom": true
+    "bloom": true,
+    "date": true
   },
   {
-    "name": "Night Vision",
-    "vhs": true,
-    "nightVision": true,
-    "contrast": 1.4,
-    "brightness": 0.9,
-    "grain": 45,
-    "scanlines": true,
-    "glitch": true
-  },
-  {
-    "name": "Expired Film",
-    "sepia": 0.7,
-    "contrast": 0.8,
-    "brightness": 1.2,
-    "grain": 35,
-    "fade": 0.4,
-    "vignette": true,
-    "rgbShift": 2
-  },
-  {
-    "name": "Light Leak Dream",
-    "sepia": 0.8,
-    "contrast": 1.1,
-    "brightness": 1.3,
-    "grain": 20,
-    "lightLeak": true,
-    "fade": 0.2,
-    "vignette": false
-  },
-  {
-    "name": "Instagram Vintage",
-    "sepia": 0.5,
-    "contrast": 1.2,
-    "brightness": 1.1,
-    "grain": 15,
-    "fade": 0.2,
-    "vignette": true
-  },
-  {
-    "name": "Cinematic Noir",
+    "name": "Noir",
+    "category": "effects",
     "blackWhite": true,
-    "contrast": 1.6,
-    "brightness": 0.9,
+    "contrast": 1.7,
+    "brightness": 0.85,
+    "grain": 16,
+    "scurve": 0.5,
+    "vignette": { "radius": 0.5, "intensity": 0.5 },
+    "fade": 0.05,
+    "date": false
+  },
+
+  {
+    "name": "Canon G7",
+    "category": "digicam",
+    "ev": 0.3,
+    "contrast": 1.1,
+    "brightness": 1.0,
+    "scurve": 0.3,
+    "colorGain": { "r": 1.05, "g": 1.0, "b": 0.97 },
+    "grain": 4,
+    "vignette": { "radius": 0.7, "intensity": 0.25 },
+    "date": true,
+    "flash": {
+      "intensity": 0.5,
+      "tint": [2, 4, 8],
+      "falloff": 0.5,
+      "bgDarken": 0.2,
+      "hotspot": 215
+    }
+  },
+  {
+    "name": "Canon G9",
+    "category": "digicam",
+    "ev": 0.3,
+    "contrast": 1.15,
+    "brightness": 1.0,
+    "scurve": 0.35,
+    "saturate": 1.08,
+    "grain": 3,
+    "vignette": { "radius": 0.7, "intensity": 0.2 },
+    "date": true,
+    "flash": {
+      "intensity": 0.5,
+      "tint": [2, 4, 8],
+      "falloff": 0.5,
+      "bgDarken": 0.2,
+      "hotspot": 215
+    }
+  },
+  {
+    "name": "Canon SD1000",
+    "category": "digicam",
+    "ev": 0.5,
+    "contrast": 1.25,
+    "brightness": 1.0,
+    "scurve": 0.6,
+    "saturate": 1.15,
+    "colorGain": { "r": 1.10, "g": 1.0, "b": 1.0 },
+    "grain": 6,
+    "vignette": { "radius": 0.6, "intensity": 0.3 },
+    "date": true,
+    "flash": {
+      "intensity": 0.65,
+      "tint": [3, 5, 10],
+      "falloff": 0.45,
+      "bgDarken": 0.3,
+      "hotspot": 200
+    }
+  },
+  {
+    "name": "Canon SD750",
+    "category": "digicam",
+    "ev": 0.7,
+    "contrast": 1.35,
+    "brightness": 1.0,
+    "scurve": 0.8,
+    "saturate": 1.10,
+    "colorGain": { "r": 1.05, "g": 1.0, "b": 1.0 },
+    "grain": 3,
+    "vignette": { "radius": 0.5, "intensity": 0.4 },
+    "date": true,
+    "flash": {
+      "intensity": 0.7,
+      "tint": [3, 5, 10],
+      "falloff": 0.42,
+      "bgDarken": 0.35,
+      "hotspot": 195
+    }
+  },
+  {
+    "name": "Sony W1",
+    "category": "digicam",
+    "ev": 0.4,
+    "contrast": 1.15,
+    "brightness": 1.0,
+    "scurve": 0.3,
+    "colorGain": { "r": 1.10, "g": 1.05, "b": 0.95 },
+    "grain": 8,
+    "vignette": { "radius": 0.6, "intensity": 0.25 },
+    "date": true,
+    "flash": {
+      "intensity": 0.55,
+      "tint": [2, 5, 10],
+      "falloff": 0.48,
+      "bgDarken": 0.25,
+      "hotspot": 205
+    }
+  },
+  {
+    "name": "Sony WX1",
+    "category": "digicam",
+    "ev": 0.2,
+    "contrast": 1.05,
+    "brightness": 1.0,
+    "scurve": 0.15,
+    "grain": 2,
+    "vignette": { "radius": 0.7, "intensity": 0.15 },
+    "date": true,
+    "flash": {
+      "intensity": 0.45,
+      "tint": [1, 3, 6],
+      "falloff": 0.52,
+      "bgDarken": 0.18,
+      "hotspot": 220
+    }
+  },
+  {
+    "name": "Sony T70",
+    "category": "digicam",
+    "ev": 0.5,
+    "contrast": 1.25,
+    "brightness": 1.0,
+    "scurve": 0.6,
+    "saturate": 1.15,
+    "blur": 0.3,
+    "grain": 2,
+    "vignette": { "radius": 0.6, "intensity": 0.3 },
+    "date": true,
+    "flash": {
+      "intensity": 0.6,
+      "tint": [2, 5, 10],
+      "falloff": 0.46,
+      "bgDarken": 0.28,
+      "hotspot": 205
+    }
+  },
+  {
+    "name": "Sony P200",
+    "category": "digicam",
+    "ev": 0.6,
+    "contrast": 1.3,
+    "brightness": 1.0,
+    "scurve": 0.7,
+    "saturate": 1.12,
+    "blur": 0.4,
+    "grain": 3,
+    "vignette": { "radius": 0.55, "intensity": 0.3 },
+    "date": true,
+    "flash": {
+      "intensity": 0.6,
+      "tint": [2, 5, 10],
+      "falloff": 0.45,
+      "bgDarken": 0.3,
+      "hotspot": 200
+    }
+  },
+  {
+    "name": "Nikon 4500",
+    "category": "digicam",
+    "ev": 0.3,
+    "contrast": 1.1,
+    "brightness": 1.0,
+    "scurve": 0.25,
+    "saturate": 1.05,
+    "grain": 8,
+    "vignette": { "radius": 0.8, "intensity": 0.15 },
+    "date": true,
+    "flash": {
+      "intensity": 0.5,
+      "tint": [2, 4, 8],
+      "falloff": 0.5,
+      "bgDarken": 0.22,
+      "hotspot": 210
+    }
+  },
+  {
+    "name": "Nikon S210",
+    "category": "digicam",
+    "ev": 0.3,
+    "contrast": 1.08,
+    "brightness": 1.0,
+    "scurve": 0.2,
+    "grain": 10,
+    "vignette": { "radius": 0.7, "intensity": 0.2 },
+    "date": true,
+    "flash": {
+      "intensity": 0.5,
+      "tint": [2, 4, 8],
+      "falloff": 0.48,
+      "bgDarken": 0.22,
+      "hotspot": 210
+    }
+  },
+  {
+    "name": "Nikon L3",
+    "category": "digicam",
+    "ev": 0.4,
+    "contrast": 1.1,
+    "brightness": 1.0,
+    "scurve": 0.25,
+    "saturate": 1.08,
+    "grain": 4,
+    "vignette": { "radius": 0.65, "intensity": 0.25 },
+    "date": true,
+    "flash": {
+      "intensity": 0.55,
+      "tint": [2, 4, 8],
+      "falloff": 0.48,
+      "bgDarken": 0.25,
+      "hotspot": 210
+    }
+  },
+  {
+    "name": "Fuji F30",
+    "category": "digicam",
+    "ev": 0.2,
+    "contrast": 1.05,
+    "brightness": 1.0,
+    "scurve": 0.15,
+    "grain": 4,
+    "vignette": { "radius": 0.75, "intensity": 0.1 },
+    "date": true,
+    "flash": {
+      "intensity": 0.45,
+      "tint": [1, 3, 6],
+      "falloff": 0.52,
+      "bgDarken": 0.18,
+      "hotspot": 220
+    }
+  },
+  {
+    "name": "Fuji Z5fd",
+    "category": "digicam",
+    "ev": 0.3,
+    "contrast": 1.1,
+    "brightness": 1.0,
+    "scurve": 0.2,
+    "grain": 4,
+    "vignette": { "radius": 0.7, "intensity": 0.2 },
+    "date": true,
+    "flash": {
+      "intensity": 0.48,
+      "tint": [1, 3, 6],
+      "falloff": 0.5,
+      "bgDarken": 0.2,
+      "hotspot": 218
+    }
+  },
+  {
+    "name": "Olympus 710",
+    "category": "digicam",
+    "ev": 0.3,
+    "contrast": 1.1,
+    "brightness": 1.0,
+    "scurve": 0.3,
+    "saturate": 1.05,
+    "colorGain": { "r": 1.0, "g": 1.0, "b": 1.05 },
+    "blur": 0.3,
+    "grain": 7,
+    "vignette": { "radius": 0.7, "intensity": 0.3 },
+    "date": true,
+    "flash": {
+      "intensity": 0.55,
+      "tint": [2, 5, 10],
+      "falloff": 0.48,
+      "bgDarken": 0.25,
+      "hotspot": 210
+    }
+  },
+  {
+    "name": "Olympus μ-7000",
+    "category": "digicam",
+    "ev": 0.3,
+    "contrast": 1.1,
+    "brightness": 1.0,
+    "scurve": 0.25,
+    "grain": 6,
+    "vignette": { "radius": 0.7, "intensity": 0.2 },
+    "date": true,
+    "flash": {
+      "intensity": 0.5,
+      "tint": [2, 4, 8],
+      "falloff": 0.5,
+      "bgDarken": 0.22,
+      "hotspot": 212
+    }
+  },
+
+  {
+    "name": "Kodak Gold",
+    "category": "film",
+    "sepia": 0.35,
+    "contrast": 1.15,
+    "brightness": 1.08,
+    "scurve": 0.25,
+    "colorGain": { "r": 1.08, "g": 1.0, "b": 0.95 },
+    "grain": 18,
+    "vignette": { "radius": 0.65, "intensity": 0.3 },
+    "warmth": 0.12,
+    "fade": 0.05,
+    "date": true
+  },
+  {
+    "name": "Portra 400",
+    "category": "film",
+    "sepia": 0.15,
+    "contrast": 0.92,
+    "brightness": 1.12,
+    "scurve": 0.15,
+    "grain": 10,
+    "vignette": { "radius": 0.65, "intensity": 0.25 },
+    "fade": 0.12,
+    "warmth": 0.08,
+    "date": false
+  },
+  {
+    "name": "Fuji Superia",
+    "category": "film",
+    "sepia": 0.08,
+    "contrast": 1.25,
+    "brightness": 1.05,
+    "scurve": 0.3,
+    "colorGain": { "r": 1.0, "g": 1.03, "b": 1.0 },
+    "grain": 14,
+    "vignette": { "radius": 0.6, "intensity": 0.25 },
+    "coolTint": 0.04,
+    "date": false
+  },
+  {
+    "name": "CineStill 800T",
+    "category": "film",
+    "sepia": 0.05,
+    "contrast": 1.18,
+    "brightness": 0.95,
+    "scurve": 0.35,
+    "coolTint": 0.1,
+    "grain": 22,
+    "vignette": { "radius": 0.6, "intensity": 0.3 },
+    "bloom": true,
+    "rgbShift": 1,
+    "date": false
+  },
+  {
+    "name": "Ilford HP5",
+    "category": "film",
+    "blackWhite": true,
+    "contrast": 1.35,
+    "brightness": 1.0,
+    "scurve": 0.4,
     "grain": 20,
-    "vignette": true
+    "vignette": { "radius": 0.6, "intensity": 0.3 },
+    "date": false
+  },
+  {
+    "name": "Polaroid",
+    "category": "film",
+    "sepia": 0.25,
+    "contrast": 0.88,
+    "brightness": 1.25,
+    "scurve": 0.15,
+    "grain": 8,
+    "fade": 0.25,
+    "warmth": 0.12,
+    "date": false
+  },
+  {
+    "name": "Stylus Epic",
+    "category": "film",
+    "ev": 0.4,
+    "contrast": 1.05,
+    "brightness": 1.0,
+    "scurve": 0.2,
+    "grain": 20,
+    "vignette": { "radius": 0.5, "intensity": 0.4 },
+    "date": false
+  },
+  {
+    "name": "Contax T2",
+    "category": "film",
+    "ev": 0.3,
+    "contrast": 1.1,
+    "brightness": 1.0,
+    "scurve": 0.35,
+    "colorGain": { "r": 1.05, "g": 1.0, "b": 1.0 },
+    "grain": 18,
+    "vignette": { "radius": 0.55, "intensity": 0.3 },
+    "warmth": 0.05,
+    "date": false
+  },
+  {
+    "name": "Yashica T4",
+    "category": "film",
+    "ev": 0.4,
+    "contrast": 1.2,
+    "brightness": 1.0,
+    "scurve": 0.6,
+    "saturate": 1.10,
+    "grain": 18,
+    "vignette": { "radius": 0.6, "intensity": 0.25 },
+    "date": false
+  },
+  {
+    "name": "Sure Shot",
+    "category": "film",
+    "ev": 0.5,
+    "contrast": 1.2,
+    "brightness": 1.0,
+    "scurve": 0.5,
+    "saturate": 1.10,
+    "colorGain": { "r": 1.0, "g": 1.0, "b": 1.05 },
+    "grain": 12,
+    "vignette": { "radius": 0.5, "intensity": 0.4 },
+    "date": true,
+    "flash": {
+      "intensity": 0.6,
+      "tint": [0, 4, 10],
+      "falloff": 0.44,
+      "bgDarken": 0.3,
+      "hotspot": 200
+    }
+  },
+  {
+    "name": "QuickSnap",
+    "category": "film",
+    "ev": 0.4,
+    "contrast": 1.1,
+    "brightness": 1.0,
+    "scurve": 0.2,
+    "colorGain": { "r": 1.0, "g": 1.10, "b": 1.10 },
+    "blur": 0.4,
+    "grain": 25,
+    "vignette": { "radius": 0.5, "intensity": 0.35 },
+    "date": true,
+    "flash": {
+      "intensity": 0.65,
+      "tint": [0, 8, 14],
+      "falloff": 0.42,
+      "bgDarken": 0.35,
+      "hotspot": 195
+    }
+  },
+  {
+    "name": "FunSaver",
+    "category": "film",
+    "ev": 0.3,
+    "contrast": 1.1,
+    "brightness": 1.0,
+    "scurve": 0.2,
+    "colorGain": { "r": 1.10, "g": 1.0, "b": 0.95 },
+    "grain": 30,
+    "vignette": { "radius": 0.6, "intensity": 0.3 },
+    "warmth": 0.1,
+    "date": true,
+    "flash": {
+      "intensity": 0.7,
+      "tint": [5, 3, 0],
+      "falloff": 0.4,
+      "bgDarken": 0.35,
+      "hotspot": 190
+    }
   }
 ]

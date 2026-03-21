@@ -1,47 +1,134 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="mobile-web-app-capable" content="yes">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
   <title>Vintage Cam</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📸</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📷</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📷</text></svg>">
 </head>
 <body>
 
-  <!-- Camera View -->
-  <div class="camera-container">
-    <video id="video" autoplay playsinline></video>
+  <!-- Viewfinder -->
+  <div class="viewfinder">
+    <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
-    
+
     <!-- Flash overlay -->
     <div id="flash" class="flash"></div>
-    
-    <!-- Timestamp -->
-    <div id="timestamp" class="timestamp">98 03 21</div>
-    
+
+    <!-- Top bar -->
+    <div class="top-bar">
+      <button id="flash-btn" class="icon-btn" aria-label="Flash">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      </button>
+      <div class="spacer"></div>
+      <button id="flip-btn" class="icon-btn" aria-label="Flip Camera">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6M1 20v-6h6"/>
+          <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Exposure slider (hidden by default) -->
+    <div id="exposure-slider" class="exposure-slider hidden">
+      <div class="exposure-track">
+        <div class="exposure-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <circle cx="12" cy="12" r="5"/>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+        </div>
+        <input type="range" id="exposure-range" min="-2" max="2" step="0.1" value="0">
+      </div>
+    </div>
+
     <!-- Recording indicator -->
     <div id="recording-indicator" class="recording-indicator hidden">
-      <div class="red-dot"></div>
-      REC
+      <div class="rec-dot"></div>
+      <span id="rec-timer">00:00</span>
     </div>
+
+    <!-- Film date stamp -->
+    <div id="date-stamp" class="date-stamp">24 03 22</div>
   </div>
 
-  <!-- Filter Selector -->
-  <div class="film-strip">
+  <!-- Filter strip -->
+  <div class="filter-strip">
+    <div class="category-tabs">
+      <button class="cat-tab active" data-cat="effects">EFFECTS</button>
+      <button class="cat-tab" data-cat="digicam">DIGICAM</button>
+      <button class="cat-tab" data-cat="film">FILM</button>
+    </div>
     <div id="filters" class="filter-scroll"></div>
   </div>
 
-  <!-- Controls -->
-  <div class="controls">
-    <button id="exposure-btn" class="exposure-btn" title="Exposure">☀️</button>
-    <button id="capture-btn" class="capture-btn" title="Photo">�</button>
-    <button id="record-btn" class="record-btn" title="Video">�</button>
-    <button id="save-btn" class="save-btn" title="Save">⬇️</button>
+  <!-- Mode selector -->
+  <div class="mode-selector">
+    <button class="mode-btn active" data-mode="photo">PHOTO</button>
+    <button class="mode-btn" data-mode="video">VIDEO</button>
   </div>
 
-  <!-- Messages -->
-  <div id="message" class="message hidden"></div>
+  <!-- Bottom controls -->
+  <div class="bottom-controls">
+    <div class="control-row">
+      <!-- Last captured thumbnail -->
+      <button id="gallery-btn" class="gallery-btn" aria-label="Gallery">
+        <div id="gallery-thumb" class="gallery-thumb"></div>
+      </button>
+
+      <!-- Shutter button -->
+      <button id="shutter-btn" class="shutter-btn" aria-label="Capture">
+        <div class="shutter-ring">
+          <div class="shutter-inner"></div>
+        </div>
+      </button>
+
+      <!-- Exposure control -->
+      <button id="exposure-btn" class="exposure-toggle" aria-label="Exposure">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast message -->
+  <div id="message" class="toast hidden"></div>
+
+  <!-- Save prompt -->
+  <div id="save-prompt" class="save-prompt hidden">
+    <div class="save-prompt-content">
+      <img id="save-preview-img" class="save-preview" alt="Preview">
+      <video id="save-preview-video" class="save-preview" controls playsinline></video>
+      <div class="save-actions">
+        <button id="save-download" class="save-btn-action">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Save
+        </button>
+        <button id="save-share" class="save-btn-action">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Share
+        </button>
+        <button id="save-dismiss" class="save-btn-action save-dismiss">Discard</button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
