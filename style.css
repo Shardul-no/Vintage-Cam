@@ -292,8 +292,16 @@ canvas {
   border-bottom-color: var(--accent);
 }
 
+/* Filter row: scroll + fav button */
+.filter-row {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
 /* Filter scroll */
 .filter-scroll {
+  flex: 1;
   display: flex;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
@@ -305,6 +313,29 @@ canvas {
 
 .filter-scroll::-webkit-scrollbar {
   display: none;
+}
+
+/* Favourite star button */
+.fav-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 8px 0 4px;
+  transition: color 0.2s ease, transform 0.15s ease;
+}
+
+.fav-btn:active {
+  transform: scale(0.85);
+}
+
+.fav-btn.active {
+  color: var(--accent);
 }
 
 .filter-scroll .filter-btn {
