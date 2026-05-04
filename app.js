@@ -27,11 +27,11 @@ const saveDownload = document.getElementById("save-download");
 const saveShare = document.getElementById("save-share");
 const saveDismiss = document.getElementById("save-dismiss");
 const modeBtns = document.querySelectorAll(".mode-btn");
-const catTabs = document.querySelectorAll(".cat-tab");
+const favBtn = document.getElementById("fav-btn");
 
 // ---- State ----
 let allFilters = [];
-let filters = []; // filtered by category
+let filters = [];
 let currentFilter = null;
 let currentFilterIndex = 0;
 let currentCategory = "effects";
@@ -50,26 +50,26 @@ let isMirrored = false;
 let exposureVisible = false;
 let messageTimeout = null;
 let animFrameId = null;
+let favourites = new Set(JSON.parse(localStorage.getItem("fav-filters") || "[]"));
 
-// ---- S-Curve LUT Cache ----
-// ---- Variables for Filters ----
+// ---- Canvas helpers ----
 let offscreenCanvas = null;
 let octx = null;
 let grainCanvas = null;
 
 function generateGrain() {
-  grainCanvas = document.createElement('canvas');
+  grainCanvas = document.createElement("canvas");
   grainCanvas.width = 512;
   grainCanvas.height = 512;
-  const gctx = grainCanvas.getContext('2d', { willReadFrequently: false });
+  const gctx = grainCanvas.getContext("2d", { willReadFrequently: false });
   const imgData = gctx.createImageData(512, 512);
   const d = imgData.data;
-  for(let i = 0; i < d.length; i += 4) {
+  for (let i = 0; i < d.length; i += 4) {
     const v = Math.random() * 255;
     d[i] = v;
-    d[i+1] = v;
-    d[i+2] = v;
-    d[i+3] = 255;
+    d[i + 1] = v;
+    d[i + 2] = v;
+    d[i + 3] = 255;
   }
   gctx.putImageData(imgData, 0, 0);
 }
@@ -91,21 +91,21 @@ async function init() {
 }
 
 function initPWA() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed', err));
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(err => console.log("SW failed", err));
   }
 
   const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-  
-  if (isIos && isSafari && !isStandalone && !localStorage.getItem('pwa-dismissed')) {
-    const banner = document.getElementById('pwa-banner');
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+
+  if (isIos && isSafari && !isStandalone && !localStorage.getItem("pwa-dismissed")) {
+    const banner = document.getElementById("pwa-banner");
     if (banner) {
-      banner.classList.remove('hidden');
-      document.getElementById('pwa-close').addEventListener('click', () => {
-        banner.classList.add('hidden');
-        localStorage.setItem('pwa-dismissed', 'true');
+      banner.classList.remove("hidden");
+      document.getElementById("pwa-close").addEventListener("click", () => {
+        banner.classList.add("hidden");
+        localStorage.setItem("pwa-dismissed", "true");
       });
     }
   }
@@ -164,21 +164,43 @@ async function loadFilters() {
     allFilters = await response.json();
   } catch (error) {
     console.error("Error loading filters:", error);
-    allFilters = [
-      { name: "Natural", category: "effects", sepia: 0, contrast: 1, brightness: 1, grain: 0 }
-    ];
+    allFilters = [{ name: "Natural", category: "effects", css: {} }];
   }
+  renderCategoryTabs();
   switchCategory("effects");
+}
+
+function renderCategoryTabs() {
+  const tabsContainer = document.querySelector(".category-tabs");
+  tabsContainer.innerHTML = "";
+
+  const categories = favourites.size > 0
+    ? [{ key: "fav", label: "FAV" }, { key: "effects", label: "EFFECTS" }, { key: "digicam", label: "DIGICAM" }, { key: "film", label: "FILM" }]
+    : [{ key: "effects", label: "EFFECTS" }, { key: "digicam", label: "DIGICAM" }, { key: "film", label: "FILM" }];
+
+  categories.forEach(({ key, label }) => {
+    const btn = document.createElement("button");
+    btn.className = "cat-tab" + (key === currentCategory ? " active" : "");
+    btn.dataset.cat = key;
+    btn.textContent = label;
+    btn.addEventListener("click", () => switchCategory(key));
+    tabsContainer.appendChild(btn);
+  });
 }
 
 function switchCategory(cat) {
   currentCategory = cat;
-  catTabs.forEach(tab => tab.classList.toggle("active", tab.dataset.cat === cat));
-  filters = allFilters.filter(f => f.category === cat);
+  document.querySelectorAll(".cat-tab").forEach(tab =>
+    tab.classList.toggle("active", tab.dataset.cat === cat)
+  );
+  if (cat === "fav") {
+    filters = allFilters.filter(f => favourites.has(f.name));
+  } else {
+    filters = allFilters.filter(f => f.category === cat);
+  }
   renderFilters();
   if (filters.length > 0) {
     selectFilter(0);
-    // Scroll to first filter after render
     setTimeout(() => scrollToFilter(0), 50);
   }
 }
@@ -203,6 +225,8 @@ function renderFilters() {
   padEnd.style.minWidth = "calc(50vw - 45px)";
   padEnd.style.flexShrink = "0";
   filtersContainer.appendChild(padEnd);
+
+  updateFavBtn();
 }
 
 function selectFilter(index) {
@@ -210,6 +234,7 @@ function selectFilter(index) {
   currentFilter = filters[index];
   updateActiveFilter();
   scrollToFilter(index);
+  updateFavBtn();
 }
 
 function updateActiveFilter() {
@@ -222,12 +247,43 @@ function scrollToFilter(index) {
   if (btn) btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
 }
 
+// ---- Favourites ----
+function updateFavBtn() {
+  if (!favBtn || !currentFilter) return;
+  const isFav = favourites.has(currentFilter.name);
+  favBtn.textContent = isFav ? "★" : "☆";
+  favBtn.classList.toggle("active", isFav);
+}
+
+function toggleFavourite() {
+  if (!currentFilter) return;
+  const name = currentFilter.name;
+  if (favourites.has(name)) {
+    favourites.delete(name);
+  } else {
+    favourites.add(name);
+  }
+  localStorage.setItem("fav-filters", JSON.stringify([...favourites]));
+  renderCategoryTabs();
+
+  // If we're in FAV tab and just un-favourited, fall back to effects
+  if (currentCategory === "fav" && !favourites.has(name)) {
+    if (favourites.size === 0) {
+      switchCategory("effects");
+    } else {
+      switchCategory("fav");
+    }
+  } else {
+    updateFavBtn();
+  }
+}
+
 // ---- Event Listeners ----
 function setupEventListeners() {
   shutterBtn.addEventListener("click", handleShutter);
   flashBtn.addEventListener("click", toggleFlash);
   flipBtn.addEventListener("click", flipCamera);
-  
+
   const mirrorBtn = document.getElementById("mirror-btn");
   if (mirrorBtn) {
     mirrorBtn.addEventListener("click", () => {
@@ -249,10 +305,9 @@ function setupEventListeners() {
     });
   });
 
-  // Category tabs
-  catTabs.forEach(tab => {
-    tab.addEventListener("click", () => switchCategory(tab.dataset.cat));
-  });
+  if (favBtn) {
+    favBtn.addEventListener("click", toggleFavourite);
+  }
 
   saveDownload.addEventListener("click", downloadMedia);
   saveShare.addEventListener("click", shareMedia);
@@ -294,6 +349,7 @@ function snapToNearestFilter() {
     currentFilterIndex = closestIndex;
     currentFilter = filters[closestIndex];
     updateActiveFilter();
+    updateFavBtn();
   }
 }
 
@@ -467,15 +523,15 @@ function startLivePreview() {
 function buildCSSFilter(filter) {
   const parts = [];
   const css = filter.css || {};
-  
+
   if (css.sepia > 0) parts.push(`sepia(${css.sepia})`);
   if (css.contrast && css.contrast !== 1) parts.push(`contrast(${css.contrast})`);
-  
+
   const evOffset = filter.ev || 0;
   const exposureMultiplier = Math.pow(2, evOffset + exposureValue);
   const totalBrightness = (css.brightness || 1) * exposureMultiplier;
   if (totalBrightness !== 1) parts.push(`brightness(${totalBrightness})`);
-  
+
   if (css.saturate && css.saturate !== 1) parts.push(`saturate(${css.saturate})`);
   if (css.blur > 0) parts.push(`blur(${css.blur}px)`);
   if (css.hueRotate) parts.push(`hue-rotate(${css.hueRotate}deg)`);
@@ -485,18 +541,14 @@ function buildCSSFilter(filter) {
   return parts.length > 0 ? parts.join(" ") : "none";
 }
 
-// ===========================================================
-// EFFECTS PIPELINE (Compositing)
-// ===========================================================
+// ---- Effects Pipeline (Compositing) ----
 function applyEffects(filter, w, h) {
-  // Lifted Blacks / Faded Shadows
   if (filter.lift) {
     ctx.globalCompositeOperation = "screen";
     ctx.fillStyle = filter.lift;
     ctx.fillRect(0, 0, w, h);
   }
 
-  // Color Tints & Overlays
   if (filter.overlay) {
     ctx.globalCompositeOperation = "overlay";
     ctx.fillStyle = filter.overlay;
@@ -509,12 +561,11 @@ function applyEffects(filter, w, h) {
     ctx.fillRect(0, 0, w, h);
   }
 
-  // Halation / Bloom
   if (filter.halation) {
     ctx.globalCompositeOperation = "screen";
     ctx.globalAlpha = filter.halation.opacity || 0.3;
     ctx.filter = `blur(${filter.halation.blur || 10}px)`;
-    
+
     if (!offscreenCanvas) {
       offscreenCanvas = document.createElement("canvas");
       octx = offscreenCanvas.getContext("2d", { willReadFrequently: false });
@@ -525,17 +576,16 @@ function applyEffects(filter, w, h) {
     }
     octx.clearRect(0, 0, w, h);
     octx.drawImage(canvas, 0, 0);
-    
+
     ctx.drawImage(offscreenCanvas, 0, 0);
     ctx.filter = "none";
     ctx.globalAlpha = 1.0;
   }
 
-  // Color Leaks (Edges/Corners only)
   if (filter.colorLeak) {
     ctx.globalCompositeOperation = "screen";
     const gradient = ctx.createLinearGradient(
-      filter.colorLeak.x1 * w, filter.colorLeak.y1 * h, 
+      filter.colorLeak.x1 * w, filter.colorLeak.y1 * h,
       filter.colorLeak.x2 * w, filter.colorLeak.y2 * h
     );
     gradient.addColorStop(0, filter.colorLeak.color1);
@@ -544,7 +594,6 @@ function applyEffects(filter, w, h) {
     ctx.fillRect(0, 0, w, h);
   }
 
-  // Vignette (Dark edges ONLY, NEVER brighten center)
   if (filter.vignette) {
     ctx.globalCompositeOperation = "multiply";
     const cx = w / 2;
@@ -559,32 +608,39 @@ function applyEffects(filter, w, h) {
     ctx.fillRect(0, 0, w, h);
   }
 
-  // Flash Wash (Uniform overexposed wash)
   if (filter.flashWash) {
     ctx.globalCompositeOperation = "screen";
     ctx.fillStyle = filter.flashWash;
     ctx.fillRect(0, 0, w, h);
   }
 
-  // Organic Film Grain
   if (filter.grain) {
     if (!grainCanvas) generateGrain();
     ctx.globalCompositeOperation = "overlay";
     ctx.globalAlpha = filter.grain;
-    
+
     const dx = Math.floor(Math.random() * 512);
     const dy = Math.floor(Math.random() * 512);
-    
-    ctx.fillStyle = ctx.createPattern(grainCanvas, 'repeat');
+
+    ctx.fillStyle = ctx.createPattern(grainCanvas, "repeat");
     ctx.save();
     ctx.translate(-dx, -dy);
     ctx.fillRect(dx, dy, w + dx, h + dy);
     ctx.restore();
-    
+
     ctx.globalAlpha = 1.0;
   }
 
-  // Cinematic Letterbox
+  if (filter.scanlines) {
+    ctx.globalCompositeOperation = "multiply";
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = "rgba(0,0,0,1)";
+    for (let y = 0; y < h; y += 4) {
+      ctx.fillRect(0, y + 2, w, 2);
+    }
+    ctx.globalAlpha = 1.0;
+  }
+
   if (filter.letterbox) {
     ctx.globalCompositeOperation = "source-over";
     ctx.fillStyle = "#000";
@@ -622,7 +678,7 @@ async function downloadMedia() {
   if (!currentBlob) return;
   const ts = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
   const ext = currentBlob.type.includes("mp4") ? "mp4"
-            : currentBlob.type.startsWith("video/") ? "webm" : "jpg";
+    : currentBlob.type.startsWith("video/") ? "webm" : "jpg";
   const fileName = `vintage-cam-${ts}.${ext}`;
   try {
     const url = URL.createObjectURL(currentBlob);
@@ -645,7 +701,7 @@ async function shareMedia() {
   if (!currentBlob) return;
   const ts = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
   const ext = currentBlob.type.includes("mp4") ? "mp4"
-            : currentBlob.type.startsWith("video/") ? "webm" : "jpg";
+    : currentBlob.type.startsWith("video/") ? "webm" : "jpg";
   const fileName = `vintage-cam-${ts}.${ext}`;
   const file = new File([currentBlob], fileName, { type: currentBlob.type });
   if (navigator.share && navigator.canShare?.({ files: [file] })) {
