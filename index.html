@@ -5,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Vintage Cam">
   <meta name="theme-color" content="#000000">
   <title>Vintage Cam</title>
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📷</text></svg>">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📷</text></svg>">
+  <link rel="manifest" href="manifest.json">
 </head>
 <body>
 
@@ -26,6 +28,11 @@
       <button id="flash-btn" class="icon-btn" aria-label="Flash">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      </button>
+      <button id="mirror-btn" class="icon-btn" aria-label="Mirror Camera" style="margin-left:12px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 3v18 M9 8l-4 4 4 4 M15 8l4 4-4 4" />
         </svg>
       </button>
       <div class="spacer"></div>
@@ -128,6 +135,12 @@
         <button id="save-dismiss" class="save-btn-action save-dismiss">Discard</button>
       </div>
     </div>
+  </div>
+
+  <!-- PWA Install Banner -->
+  <div id="pwa-banner" class="pwa-banner hidden">
+    <span>Add to Home Screen: tap Share <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-bottom; margin: 0 4px;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> → Add to Home Screen</span>
+    <button id="pwa-close" aria-label="Close">×</button>
   </div>
 
   <script src="app.js"></script>

@@ -46,39 +46,38 @@ let facingMode = "environment";
 let flashMode = "off";
 let exposureValue = 0;
 let currentMode = "photo";
+let isMirrored = false;
 let exposureVisible = false;
 let messageTimeout = null;
 let animFrameId = null;
 
 // ---- S-Curve LUT Cache ----
-let cachedCurveLUT = null;
-let cachedCurveStrength = null;
+// ---- Variables for Filters ----
+let offscreenCanvas = null;
+let octx = null;
+let grainCanvas = null;
 
-function buildSCurveLUT(strength) {
-  const lut = new Uint8Array(256);
-  const k = strength * 6;
-  // Precompute sigmoid bounds for normalization
-  const low = 1 / (1 + Math.exp(k * 0.5));
-  const high = 1 / (1 + Math.exp(-k * 0.5));
-  const range = high - low;
-  for (let i = 0; i < 256; i++) {
-    const x = i / 255;
-    const s = 1 / (1 + Math.exp(-k * (x - 0.5)));
-    lut[i] = Math.round(((s - low) / range) * 255);
+function generateGrain() {
+  grainCanvas = document.createElement('canvas');
+  grainCanvas.width = 512;
+  grainCanvas.height = 512;
+  const gctx = grainCanvas.getContext('2d', { willReadFrequently: false });
+  const imgData = gctx.createImageData(512, 512);
+  const d = imgData.data;
+  for(let i = 0; i < d.length; i += 4) {
+    const v = Math.random() * 255;
+    d[i] = v;
+    d[i+1] = v;
+    d[i+2] = v;
+    d[i+3] = 255;
   }
-  return lut;
-}
-
-function getSCurveLUT(strength) {
-  if (strength === cachedCurveStrength && cachedCurveLUT) return cachedCurveLUT;
-  cachedCurveStrength = strength;
-  cachedCurveLUT = buildSCurveLUT(strength);
-  return cachedCurveLUT;
+  gctx.putImageData(imgData, 0, 0);
 }
 
 // ---- Initialize ----
 async function init() {
   try {
+    initPWA();
     await startCamera();
     await loadFilters();
     startLivePreview();
@@ -88,6 +87,27 @@ async function init() {
   } catch (error) {
     showMessage("Camera access needed");
     console.error("Init error:", error);
+  }
+}
+
+function initPWA() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed', err));
+  }
+
+  const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  
+  if (isIos && isSafari && !isStandalone && !localStorage.getItem('pwa-dismissed')) {
+    const banner = document.getElementById('pwa-banner');
+    if (banner) {
+      banner.classList.remove('hidden');
+      document.getElementById('pwa-close').addEventListener('click', () => {
+        banner.classList.add('hidden');
+        localStorage.setItem('pwa-dismissed', 'true');
+      });
+    }
   }
 }
 
@@ -188,8 +208,6 @@ function renderFilters() {
 function selectFilter(index) {
   currentFilterIndex = index;
   currentFilter = filters[index];
-  // Invalidate curve cache when filter changes
-  cachedCurveStrength = null;
   updateActiveFilter();
   scrollToFilter(index);
 }
@@ -209,6 +227,15 @@ function setupEventListeners() {
   shutterBtn.addEventListener("click", handleShutter);
   flashBtn.addEventListener("click", toggleFlash);
   flipBtn.addEventListener("click", flipCamera);
+  
+  const mirrorBtn = document.getElementById("mirror-btn");
+  if (mirrorBtn) {
+    mirrorBtn.addEventListener("click", () => {
+      isMirrored = !isMirrored;
+      mirrorBtn.classList.toggle("mirror-on", isMirrored);
+    });
+  }
+
   exposureBtn.addEventListener("click", toggleExposure);
 
   exposureRange.addEventListener("input", (e) => {
@@ -266,7 +293,6 @@ function snapToNearestFilter() {
   if (closestIndex !== currentFilterIndex) {
     currentFilterIndex = closestIndex;
     currentFilter = filters[closestIndex];
-    cachedCurveStrength = null;
     updateActiveFilter();
   }
 }
@@ -403,18 +429,25 @@ function startLivePreview() {
       return;
     }
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    canvas.width = w;
+    canvas.height = h;
+
+    ctx.clearRect(0, 0, w, h);
 
     if (currentFilter) {
       ctx.filter = buildCSSFilter(currentFilter);
     }
 
-    if (facingMode === "user") {
+    let mirrorScale = 1;
+    if (facingMode === "user") mirrorScale *= -1;
+    if (isMirrored) mirrorScale *= -1;
+
+    if (mirrorScale === -1) {
       ctx.save();
       ctx.scale(-1, 1);
-      ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, -w, 0, w, h);
       ctx.restore();
     } else {
       ctx.drawImage(video, 0, 0);
@@ -423,7 +456,7 @@ function startLivePreview() {
     ctx.filter = "none";
 
     if (currentFilter) {
-      applyEffects(currentFilter);
+      applyEffects(currentFilter, w, h);
     }
 
     animFrameId = requestAnimationFrame(draw);
@@ -433,292 +466,133 @@ function startLivePreview() {
 
 function buildCSSFilter(filter) {
   const parts = [];
-  if (filter.sepia > 0) parts.push(`sepia(${filter.sepia})`);
-  if (filter.contrast && filter.contrast !== 1) parts.push(`contrast(${filter.contrast})`);
-
-  // Combine filter EV + brightness + user exposure
+  const css = filter.css || {};
+  
+  if (css.sepia > 0) parts.push(`sepia(${css.sepia})`);
+  if (css.contrast && css.contrast !== 1) parts.push(`contrast(${css.contrast})`);
+  
   const evOffset = filter.ev || 0;
   const exposureMultiplier = Math.pow(2, evOffset + exposureValue);
-  const totalBrightness = (filter.brightness || 1) * exposureMultiplier;
+  const totalBrightness = (css.brightness || 1) * exposureMultiplier;
   if (totalBrightness !== 1) parts.push(`brightness(${totalBrightness})`);
-
-  if (filter.saturate && filter.saturate !== 1) parts.push(`saturate(${filter.saturate})`);
-  if (filter.blur > 0) parts.push(`blur(${filter.blur}px)`);
+  
+  if (css.saturate && css.saturate !== 1) parts.push(`saturate(${css.saturate})`);
+  if (css.blur > 0) parts.push(`blur(${css.blur}px)`);
+  if (css.hueRotate) parts.push(`hue-rotate(${css.hueRotate}deg)`);
+  if (css.invert > 0) parts.push(`invert(${css.invert})`);
+  if (css.grayscale > 0) parts.push(`grayscale(${css.grayscale})`);
 
   return parts.length > 0 ? parts.join(" ") : "none";
 }
 
 // ===========================================================
-// EFFECTS PIPELINE
+// EFFECTS PIPELINE (Compositing)
 // ===========================================================
-function applyEffects(filter) {
-  // Phase 1: Canvas compositing overlays (warmth, cool tint)
-  if (filter.warmth > 0) applyOverlayTint(255, 180, 50, filter.warmth);
-  if (filter.coolTint > 0) applyOverlayTint(40, 80, 200, filter.coolTint);
-
-  // Phase 2: Combined pixel processing (colorGain, S-curve, flash, B&W, grain)
-  // — single getImageData/putImageData for performance
-  const needsPixels = filter.colorGain || filter.scurve || filter.flash ||
-                      filter.blackWhite || filter.grain > 0;
-  if (needsPixels) applyPixelEffects(filter);
-
-  // Phase 3: RGB shift (spatial displacement, needs own pass)
-  if (filter.rgbShift > 0) applyRGBShift(filter.rgbShift);
-
-  // Phase 4: Canvas compositing (gradients & fills)
-  if (filter.vignette) applyVignette(filter.vignette);
-  if (filter.lightLeak) applyLightLeak();
-  if (filter.fade > 0) {
-    ctx.fillStyle = `rgba(255,255,255,${filter.fade})`;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+function applyEffects(filter, w, h) {
+  // Lifted Blacks / Faded Shadows
+  if (filter.lift) {
+    ctx.globalCompositeOperation = "screen";
+    ctx.fillStyle = filter.lift;
+    ctx.fillRect(0, 0, w, h);
   }
 
-  // Phase 5: Special effects
-  if (filter.scanlines) applyScanlines();
-  if (filter.glitch) applyGlitch();
-  if (filter.bloom) applyBloom();
-}
-
-function applyOverlayTint(r, g, b, alpha) {
-  ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
-  ctx.globalCompositeOperation = "overlay";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.globalCompositeOperation = "source-over";
-}
-
-// ---- Combined Pixel Processing ----
-function applyPixelEffects(filter) {
-  const w = canvas.width;
-  const h = canvas.height;
-  const imageData = ctx.getImageData(0, 0, w, h);
-  const d = imageData.data;
-
-  // Pre-compute constants
-  const curveLUT = filter.scurve ? getSCurveLUT(filter.scurve) : null;
-  const rGain = filter.colorGain?.r ?? 1;
-  const gGain = filter.colorGain?.g ?? 1;
-  const bGain = filter.colorGain?.b ?? 1;
-  const hasGain = rGain !== 1 || gGain !== 1 || bGain !== 1;
-  const doBW = !!filter.blackWhite;
-  const grainAmt = filter.grain || 0;
-
-  // Flash pre-compute
-  const doFlash = !!filter.flash;
-  let fCx, fCy, fMaxR, fRadius, fInt, fBgD, fHot, fTint;
-  if (doFlash) {
-    const fl = filter.flash;
-    fInt = fl.intensity || 0.7;
-    fTint = fl.tint || [0, 8, 15];
-    fBgD = fl.bgDarken || 0.3;
-    fHot = fl.hotspot || 210;
-    fCx = w * 0.5;
-    fCy = h * 0.38;
-    fMaxR = Math.sqrt(fCx * fCx + fCy * fCy);
-    fRadius = fMaxR * (fl.falloff || 0.45);
+  // Color Tints & Overlays
+  if (filter.overlay) {
+    ctx.globalCompositeOperation = "overlay";
+    ctx.fillStyle = filter.overlay;
+    ctx.fillRect(0, 0, w, h);
   }
 
-  // Process in 2x2 blocks (grain clumping + performance)
-  for (let y = 0; y < h; y += 2) {
-    for (let x = 0; x < w; x += 2) {
-      // Grain noise per 2x2 block
-      let baseNoise = 0, rBias = 0, bBias = 0;
-      if (grainAmt > 0) {
-        baseNoise = (Math.random() - 0.5) * grainAmt;
-        rBias = (Math.random() - 0.5) * grainAmt * 0.15;
-        bBias = (Math.random() - 0.5) * grainAmt * 0.15;
-      }
+  if (filter.multiply) {
+    ctx.globalCompositeOperation = "multiply";
+    ctx.fillStyle = filter.multiply;
+    ctx.fillRect(0, 0, w, h);
+  }
 
-      for (let dy = 0; dy < 2 && y + dy < h; dy++) {
-        for (let dx = 0; dx < 2 && x + dx < w; dx++) {
-          const px = x + dx;
-          const py = y + dy;
-          const i = (py * w + px) * 4;
-          let r = d[i], g = d[i + 1], b = d[i + 2];
-
-          // 1. Color gain (per-channel white balance / tint)
-          if (hasGain) {
-            r *= rGain;
-            g *= gGain;
-            b *= bGain;
-          }
-
-          // 2. S-curve tone mapping via LUT
-          if (curveLUT) {
-            r = curveLUT[r > 255 ? 255 : r < 0 ? 0 : r | 0];
-            g = curveLUT[g > 255 ? 255 : g < 0 ? 0 : g | 0];
-            b = curveLUT[b > 255 ? 255 : b < 0 ? 0 : b | 0];
-          }
-
-          // 3. Flash lighting
-          if (doFlash) {
-            const fdx = px - fCx;
-            const fdy = py - fCy;
-            const dist = Math.sqrt(fdx * fdx + fdy * fdy);
-            let ff;
-            if (dist < fRadius) {
-              const t = dist / fRadius;
-              ff = fInt * (1.0 - t * t);
-            } else {
-              const t = Math.min((dist - fRadius) / (fMaxR - fRadius), 1.0);
-              ff = -fBgD * t;
-            }
-
-            const lum = (r + g + b) / 3;
-            r += ff * 180;
-            g += ff * 180;
-            b += ff * 180;
-
-            // Specular hotspots
-            if (ff > 0 && lum > fHot) {
-              const hot = ((lum - fHot) / (255 - fHot)) * fInt * 80;
-              r += hot; g += hot; b += hot;
-            }
-
-            // Background desaturation
-            if (ff < 0) {
-              const avg = (r + g + b) / 3;
-              const ds = Math.min(Math.abs(ff) * 0.6, 0.4);
-              r += (avg - r) * ds;
-              g += (avg - g) * ds;
-              b += (avg - b) * ds;
-            }
-
-            r += fTint[0]; g += fTint[1]; b += fTint[2];
-          }
-
-          // 4. Black & white
-          if (doBW) {
-            const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-            r = g = b = lum;
-          }
-
-          // 5. Grain (midtone-weighted, clumped)
-          if (grainAmt > 0) {
-            const lum = (r + g + b) / 3;
-            const midF = 1.0 - Math.abs(lum - 128) / 128 * 0.5;
-            const n = baseNoise * midF;
-            r += n + rBias;
-            g += n;
-            b += n + bBias;
-          }
-
-          // Clamp
-          d[i] = r > 255 ? 255 : r < 0 ? 0 : r;
-          d[i + 1] = g > 255 ? 255 : g < 0 ? 0 : g;
-          d[i + 2] = b > 255 ? 255 : b < 0 ? 0 : b;
-        }
-      }
+  // Halation / Bloom
+  if (filter.halation) {
+    ctx.globalCompositeOperation = "screen";
+    ctx.globalAlpha = filter.halation.opacity || 0.3;
+    ctx.filter = `blur(${filter.halation.blur || 10}px)`;
+    
+    if (!offscreenCanvas) {
+      offscreenCanvas = document.createElement("canvas");
+      octx = offscreenCanvas.getContext("2d", { willReadFrequently: false });
     }
-  }
-
-  ctx.putImageData(imageData, 0, 0);
-}
-
-// ---- RGB Shift ----
-function applyRGBShift(amount) {
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const src = imageData.data;
-  const w = canvas.width;
-  const h = canvas.height;
-  const out = new Uint8ClampedArray(src);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const idx = (y * w + x) * 4;
-      const redX = Math.max(0, x - amount);
-      out[idx] = src[(y * w + redX) * 4];
-      const blueX = Math.min(w - 1, x + amount);
-      out[idx + 2] = src[(y * w + blueX) * 4 + 2];
+    if (offscreenCanvas.width !== w || offscreenCanvas.height !== h) {
+      offscreenCanvas.width = w;
+      offscreenCanvas.height = h;
     }
+    octx.clearRect(0, 0, w, h);
+    octx.drawImage(canvas, 0, 0);
+    
+    ctx.drawImage(offscreenCanvas, 0, 0);
+    ctx.filter = "none";
+    ctx.globalAlpha = 1.0;
   }
-  ctx.putImageData(new ImageData(out, w, h), 0, 0);
-}
 
-// ---- Vignette (parameterized) ----
-function applyVignette(opts) {
-  const radius = (typeof opts === "object" ? opts.radius : null) || 0.6;
-  const intensity = (typeof opts === "object" ? opts.intensity : null) || 0.35;
-  const cx = canvas.width / 2;
-  const cy = canvas.height / 2;
-  const r = Math.max(canvas.width, canvas.height) / 2;
-  const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-  gradient.addColorStop(0, "rgba(0,0,0,0)");
-  gradient.addColorStop(radius, "rgba(0,0,0,0)");
-  gradient.addColorStop(Math.min(radius + 0.2, 0.95), `rgba(0,0,0,${intensity * 0.5})`);
-  gradient.addColorStop(1, `rgba(0,0,0,${intensity})`);
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-// ---- Light Leak ----
-function applyLightLeak() {
-  const seed = Math.floor(Date.now() / 2000) % 4;
-  const positions = [
-    { x1: 0, y1: 0, x2: canvas.width * 0.7, y2: canvas.height * 0.6 },
-    { x1: canvas.width * 0.3, y1: 0, x2: canvas.width, y2: canvas.height * 0.8 },
-    { x1: 0, y1: canvas.height * 0.4, x2: canvas.width * 0.6, y2: canvas.height },
-    { x1: canvas.width * 0.5, y1: 0, x2: canvas.width, y2: canvas.height * 0.7 }
-  ];
-  const pos = positions[seed];
-  const gradient = ctx.createLinearGradient(pos.x1, pos.y1, pos.x2, pos.y2);
-  gradient.addColorStop(0, "rgba(255, 120, 50, 0.18)");
-  gradient.addColorStop(0.4, "rgba(255, 200, 80, 0.1)");
-  gradient.addColorStop(0.7, "rgba(255, 150, 50, 0.06)");
-  gradient.addColorStop(1, "rgba(200, 80, 40, 0.03)");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-// ---- Scanlines ----
-function applyScanlines() {
-  ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
-  for (let y = 0; y < canvas.height; y += 4) {
-    ctx.fillRect(0, y, canvas.width, 2);
+  // Color Leaks (Edges/Corners only)
+  if (filter.colorLeak) {
+    ctx.globalCompositeOperation = "screen";
+    const gradient = ctx.createLinearGradient(
+      filter.colorLeak.x1 * w, filter.colorLeak.y1 * h, 
+      filter.colorLeak.x2 * w, filter.colorLeak.y2 * h
+    );
+    gradient.addColorStop(0, filter.colorLeak.color1);
+    gradient.addColorStop(1, filter.colorLeak.color2);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, w, h);
   }
-}
 
-// ---- Glitch ----
-function applyGlitch() {
-  if (Math.random() > 0.94) {
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const d = imageData.data;
-    const w = canvas.width;
-    const glitchH = Math.floor(Math.random() * 20) + 5;
-    const glitchY = Math.floor(Math.random() * canvas.height);
-    const shift = Math.floor(Math.random() * 30) - 15;
-    for (let y = glitchY; y < Math.min(glitchY + glitchH, canvas.height); y++) {
-      for (let x = 0; x < w; x++) {
-        const sx = (x + shift + w) % w;
-        const si = (y * w + sx) * 4;
-        const ti = (y * w + x) * 4;
-        d[ti] = d[si]; d[ti + 1] = d[si + 1]; d[ti + 2] = d[si + 2];
-      }
-    }
-    ctx.putImageData(imageData, 0, 0);
+  // Vignette (Dark edges ONLY, NEVER brighten center)
+  if (filter.vignette) {
+    ctx.globalCompositeOperation = "multiply";
+    const cx = w / 2;
+    const cy = h / 2;
+    const r = Math.max(w, h) * (filter.vignette.size || 0.7);
+    const intensity = filter.vignette.intensity || 0.5;
+    const gradient = ctx.createRadialGradient(cx, cy, r * 0.5, cx, cy, r);
+    const edgeColor = Math.floor(255 * (1 - intensity));
+    gradient.addColorStop(0, "rgb(255,255,255)");
+    gradient.addColorStop(1, `rgb(${edgeColor},${edgeColor},${edgeColor})`);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, w, h);
   }
-}
 
-// ---- Bloom ----
-function applyBloom() {
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const d = imageData.data;
-  const bright = new Uint8ClampedArray(d);
-  const threshold = 200;
-  for (let i = 0; i < d.length; i += 4) {
-    const avg = (d[i] + d[i + 1] + d[i + 2]) / 3;
-    if (avg > threshold) {
-      const f = (avg - threshold) / (255 - threshold);
-      bright[i] = Math.min(255, d[i] + f * 40);
-      bright[i + 1] = Math.min(255, d[i + 1] + f * 40);
-      bright[i + 2] = Math.min(255, d[i + 2] + f * 40);
-    } else {
-      bright[i] = bright[i + 1] = bright[i + 2] = 0;
-    }
+  // Flash Wash (Uniform overexposed wash)
+  if (filter.flashWash) {
+    ctx.globalCompositeOperation = "screen";
+    ctx.fillStyle = filter.flashWash;
+    ctx.fillRect(0, 0, w, h);
   }
-  ctx.putImageData(new ImageData(bright, canvas.width, canvas.height), 0, 0);
-  ctx.filter = "blur(3px)";
-  ctx.globalCompositeOperation = "screen";
-  ctx.drawImage(canvas, 0, 0);
-  ctx.filter = "none";
+
+  // Organic Film Grain
+  if (filter.grain) {
+    if (!grainCanvas) generateGrain();
+    ctx.globalCompositeOperation = "overlay";
+    ctx.globalAlpha = filter.grain;
+    
+    const dx = Math.floor(Math.random() * 512);
+    const dy = Math.floor(Math.random() * 512);
+    
+    ctx.fillStyle = ctx.createPattern(grainCanvas, 'repeat');
+    ctx.save();
+    ctx.translate(-dx, -dy);
+    ctx.fillRect(dx, dy, w + dx, h + dy);
+    ctx.restore();
+    
+    ctx.globalAlpha = 1.0;
+  }
+
+  // Cinematic Letterbox
+  if (filter.letterbox) {
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = "#000";
+    const barHeight = h * 0.12;
+    ctx.fillRect(0, 0, w, barHeight);
+    ctx.fillRect(0, h - barHeight, w, barHeight);
+  }
+
   ctx.globalCompositeOperation = "source-over";
 }
 
